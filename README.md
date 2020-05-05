@@ -18,7 +18,8 @@ Implementation of Devign Model in Python with code for processing the dataset an
         * [Create Task](#create-task)
         * [Embed Task](#embed-task)
         * [Process Task](#process-task)
-* [Roadmap](#Roadmap)
+* [Results](#results)
+* [Roadmap](#roadmap)
 * [License](#license)
 * [Contact](#contact)
 * [Acknowledgements](#acknowledgements)
@@ -59,6 +60,7 @@ That can be done by changing the ```"slice_size"``` value under ```"create"``` i
 needs to match ```"in_channels"```, under ```"devign" -> "model" -> "conv_args" -> "conv1d_1"```.
 * The embedding size is equal to Word2Vec vector size plus 1.
 * When executing the **Create** task, a directory named ```joern``` is created and deleted automatically under ```'project'\data\```.
+* The dataset split for modeling during **Process** task is done under ```src/data/datamanger.py```. The sets are balanced and the train/val/test ratio are 0.8/0.1/0.1 respectively. 
 ### Setup
 
 ---
@@ -163,8 +165,8 @@ The dataset used is the [partial dataset](https://sites.google.com/view/devign) 
 The dataset is handled with Pandas and the file ```src/data/datamanger.py``` contains wrapper functions for the most essential operations. 
 <br/>
 <br/>
-A small sample from the original dataset is available for testing purposes. 
-The sample dataset contains functions from the **FFmpeg** project with maximum of 287 nodes per function.
+A small sample of 994 entries from the original dataset is available for testing purposes. 
+The sample dataset contains functions from the **FFmpeg** project with a maximum of 287 nodes per function.
 For each task, the necessary dataset files are available under the respective folders.
 <br/>
 <br/>
@@ -229,11 +231,53 @@ for the initial embeddings. The nodes embeddings are done as explained in the pa
 Execute with:
 ``` console
 $ python main.py -e
+
 ```
 
+##### Tokenization example
+Source code:
+```
+'static void v4l2_free_buffer(void *opaque, uint8_t *unused)
+{
+
+    V4L2Buffer* avbuf = opaque;
+
+    V4L2m2mContext *s = buf_to_m2mctx(avbuf);
+
+
+
+    if (atomic_fetch_sub(&avbuf->context_refcount, 1) == 1) {
+
+        atomic_fetch_sub_explicit(&s->refcount, 1, memory_order_acq_rel);
+
+
+
+        if (s->reinit) {
+
+            if (!atomic_load(&s->refcount))
+
+              sem_post(&s->refsync);
+
+        } else if (avbuf->context->streamon)
+
+            ff_v4l2_buffer_enqueue(avbuf);
+
+
+
+        av_buffer_unref(&avbuf->context_ref);
+
+    }
+
+}
+'
+```
+Tokens:
+['static', 'void', 'FUN1', '(', 'void', '*', 'VAR1', ',', 'uint8_t', '*', 'VAR2)', '{', 'VAR3', '*', 'VAR4', '=', 'VAR1', ';', 'V4L2m2mContext', '*', 'VAR5', '=', 'FUN2', '(', 'VAR4)', ';', 'if', '(', 'FUN3', '(', '&', 'VAR4', '-', '>', 'VAR6', ',', '1)', '==', '1)', '{', 'FUN4', '(', '&', 'VAR5', '-', '>', 'VAR7', ',', '1', ',', 'VAR8)', ';', 'if', '(', 'VAR5', '-', '>', 'VAR9)', '{', 'if', '(', '!', 'FUN5', '(', '&', 'VAR5', '-', '>', 'VAR7))', 'FUN6', '(', '&', 'VAR5', '-', '>', 'VAR10)', ';', '}', 'else', 'if', '(', 'VAR4', '-', '>', 'VAR11', '-', '>', 'VAR12)', 'FUN7', '(', 'VAR4)', ';', 'FUN8', '(', '&', 'VAR4', '-', '>', 'VAR13)', ';', '}', '}']
+
+ 
 #### Process Task
 In this task the previous transformed dataset is split into train, validation and test sets which are
- used to train an evaluate the model.
+ used to train an evaluate the model. The accuracy from training output is **softmax accuracy**.
 
 Execute with:
 ``` console
@@ -245,6 +289,53 @@ Enable EarlyStopping for training with:
 ``` console
 $ python main.py -pS
 ``` 
+
+## Results
+Train/Val/Test ratios - 0.8/0.1/0.1
+Example results of training with early stopping on the sample dataset.
+Last Model checkpoint at 5 epochs.
+ 
+Parameters used:
+ - "learning_rate" : 1e-4
+ - "weight_decay" : 1.3e-6
+ - "loss_lambda" : 1.3e-6
+ - "epochs" : 100
+ - "patience" : 10
+ - "batch_size" : 8
+ - "dataset_ratio" : 1 (Total entries)
+ - "shuffle" : false
+
+True Pos.: 37, False Pos.: 27, True Neg.: 22, False Neg.: 15
+Accuracy: 0.5841584158415841
+Precision: 0.578125
+Recall: 0.7115384615384616
+F-measure: 0.6379310344827586
+Precision-Recall AUC: 0.5388430220841324
+AUC: 0.5569073783359497
+MCC: 0.166507096257419
+
+Example results of training without early stopping on the sample dataset.
+ 
+Parameters used:
+ - "learning_rate" : 1e-4
+ - "weight_decay" : 1.3e-6
+ - "loss_lambda" : 1.3e-6
+ - "epochs" : 30
+ - "patience" : 10
+ - "batch_size" : 8
+ - "dataset_ratio" : 1 (Total entries)
+ - "shuffle" : false
+
+True Pos.: 38, False Pos.: 34, True Neg.: 15, False Neg.: 14
+Accuracy: 0.5247524752475248
+Precision: 0.5277777777777778
+Recall: 0.7307692307692307
+F-measure: 0.6129032258064515
+Precision-Recall AUC: 0.5592493611149129
+AUC: 0.5429748822605965
+MCC: 0.04075331061223071
+Error: 53.56002758457897
+
 
 ## Roadmap
 
